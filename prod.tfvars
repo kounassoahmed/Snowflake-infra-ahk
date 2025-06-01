@@ -1,0 +1,7 @@
+environment = "prod"
+snowflake_account_name = "gn16349"
+snowflake_organization_name = "fmlyvdt"
+snowflake_username = "TERRAFORM_DEV_SVC"
+snowflake_account_role = "ACCOUNTADMIN"
+snowflake_account_authenticator = "SNOWFLAKE_JWT"
+private_key_path = "/home/runner/.ssh/prod_snowflake_tf_snow_key.p8"
