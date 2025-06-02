@@ -1,5 +1,5 @@
 {
-  "DEV_STG_BKPF": {},
-  "DEV_STG_BSEG": {},
-  "DEV_STG_T001": {}
+  "DEV_SAP_STG": {},
+  "DEV_SAP_RAW": {},
+  "DEV_SAP_DHW": {}
 }
