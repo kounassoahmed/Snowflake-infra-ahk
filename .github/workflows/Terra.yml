@@ -82,9 +82,11 @@ jobs:
 
       - name: Install SnowSQL CLI
         run: |
-          curl "https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowsql" -o snowsql
-          chmod +x snowsql
-          sudo mv snowsql /usr/local/bin/
+          wget -O install_snowsql.sh \
+            https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowsql-1.2.24-linux_x86_64.bash
+          chmod +x install_snowsql.sh
+          ./install_snowsql.sh --yes
+          echo 'export PATH="$HOME/.snowsql/bin:$PATH"' >> $GITHUB_ENV
           snowsql --version
 
       - name: Create Snowflake user ahmedkounassopro
@@ -103,4 +105,28 @@ jobs:
             DEFAULT_ROLE = ACCOUNTADMIN
             MUST_CHANGE_PASSWORD = TRUE;
           GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;
-          S
+          SQL
+
+      - name: Generate dynamic projects var
+        run: |
+          jq -n \
+            --arg sap "${{ secrets.SAP_USER_PASSWORD }}" \
+            --arg sf "${{ secrets.SALESFORCE_USER_PASSWORD }}" \
+            '{
+              projects: {
+                SAP: { user_password: $sap },
+                SALESFORCE: { user_password: $sf }
+              }
+            }' > dynamic-projects.auto.tfvars.json
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: .
+
+      - name: Terraform Init
+        run: terraform init -upgrade
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file=${{ vars.ENV }}.tfvars tfplan.binary
