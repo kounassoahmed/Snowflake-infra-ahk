@@ -1,31 +1,31 @@
+# terraform/main.tf
 terraform {
+  required_version = ">= 1.0"
   required_providers {
     snowflake = {
-      source  = "snowflakedb/snowflake"
-      version = ">= 1.0.0"
+      source  = "Snowflake-Labs/snowflake"
+      version = "0.54.0"
     }
   }
 }
 
 provider "snowflake" {
-  alias               = "main"
-  account_name        = var.snowflake_account_name
-  organization_name   = var.snowflake_organization_name
-  user                = var.snowflake_username
-  role                = var.snowflake_account_role
-  authenticator       = var.snowflake_account_authenticator
-  private_key         = file(var.private_key_path)
+  account          = var.snowflake_account
+  username         = var.snowflake_admin_user
+  private_key_path = var.snowflake_private_key_path
+  region           = var.snowflake_region        # ex: "eu-west-1"
+  role             = var.snowflake_admin_role    # ex: "SECURITYADMIN"
 }
 
-module "project" {
-
-  for_each      = var.projects
-  source        = "./modules/project"
-  project_name  = each.key
-  user_password = each.value.user_password
-
-  providers = {
-    snowflake = snowflake.main
-  }
+resource "snowflake_user" "ahmedkounassopro" {
+  name                 = "AHMEDKOUNASSOPRO"
+  login_name           = "ahmedkounassopro"
+  password             = "Strongpassword123+"
+  default_role         = "ACCOUNTADMIN"
+  must_change_password = true
 }
 
+resource "snowflake_role_grant" "grant_accountadmin_to_ahmed" {
+  role_name = "ACCOUNTADMIN"
+  users     = [snowflake_user.ahmedkounassopro.name]
+}
