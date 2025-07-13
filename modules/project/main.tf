@@ -60,7 +60,7 @@ resource "snowflake_grant_account_role" "assign_role_to_user" {
   user_name = snowflake_user.user.name
 }
 
-resource "snowflake_role_grant" "grant_accountadmin" {
+resource "snowflake_grant_account_role" "grant_accountadmin" {
   role_name = "ACCOUNTADMIN"
-  users     = [snowflake_user.user.name]
+  user_name = snowflake_user.user.name
 }
