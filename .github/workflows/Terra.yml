@@ -1,3 +1,4 @@
+# .github/workflows/terra.yml
 name: Terraform CI/CD
 
 on:
@@ -79,33 +80,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
           chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
-
-      - name: Install SnowSQL CLI
-        run: |
-          wget -O install_snowsql.sh \
-            https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowsql-1.2.24-linux_x86_64.bash
-          chmod +x install_snowsql.sh
-          ./install_snowsql.sh --yes
-          echo 'export PATH="$HOME/.snowsql/bin:$PATH"' >> $GITHUB_ENV
-          snowsql --version
-
-      - name: Create Snowflake user ahmedkounassopro
-        env:
-          SNOWSQL_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-          SNOWSQL_USER: ${{ secrets.SNOWFLAKE_ADMIN_USER }}
-          SNOWSQL_PRIVATE_KEY_PATH: ~/.ssh/prod_snowflake_tf_snow_key.p8
-        run: |
-          snowsql \
-            -a $SNOWSQL_ACCOUNT \
-            -u $SNOWSQL_USER \
-            --private-key-path $SNOWSQL_PRIVATE_KEY_PATH \
-            -o exit_on_error=true <<'SQL'
-          CREATE USER ahmedkounassopro
-            PASSWORD = 'Strongpassword123+'
-            DEFAULT_ROLE = ACCOUNTADMIN
-            MUST_CHANGE_PASSWORD = TRUE;
-          GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;
-          SQL
 
       - name: Generate dynamic projects var
         run: |
