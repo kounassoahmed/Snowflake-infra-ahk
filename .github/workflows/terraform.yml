@@ -97,12 +97,6 @@ jobs:
               }
             }' > dynamic-projects.auto.tfvars.json
 
-      - name: Print generated passwords
-        run: |
-          echo "🔐 Passwords generated for each project:"
-          jq -r '.projects
-            | to_entries[]
-            | "\(.key): \(.value.user_password)"' dynamic-projects.auto.tfvars.json
 
       - name: Download Plan
         uses: actions/download-artifact@v4
