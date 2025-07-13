@@ -1,141 +1,117 @@
+# .github/workflows/terra.yml
 name: Terraform CI/CD
 
 on:
-pull\_request:
-branches: \[main]
-workflow\_dispatch:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-terraform-plan:
-name: Terraform Plan
-runs-on: ubuntu-latest
-steps:
-\- name: Checkout repo
-uses: actions/checkout\@v3
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
 
-```
-  - name: Setup Terraform
-    uses: hashicorp/setup-terraform@v2
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-  - name: Setup SSH Key
-    run: |
-      mkdir -p ~/.ssh
-      echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
-      chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-  - name: Create Snowflake user
-    run: |
-      echo "CREATE USER ahmedkounassopro PASSWORD='Strongpassword123+' DEFAULT_ROLE=ACCOUNTADMIN MUST_CHANGE_PASSWORD=TRUE; GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;" > create_user.sql
-      snowsql \
-        -a ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }} \
-        -u ${{ secrets.SNOWFLAKE_USERNAME }} \
-        --private-key-path ~/.ssh/prod_snowflake_tf_snow_key.p8 \
-        -f create_user.sql
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
+          chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
 
-  - name: Generate dynamic projects var
-    shell: bash
-    env:
-      NEW_USERS_PWD: ${{ vars.NEW_USERS_PWD }}
-    run: |
-      PROJECTS=$(jq -r 'keys[]' database.json)
-      TIMESTAMP=$(date +%s)
-  
-      echo '{ "projects": {' > dynamic-projects.auto.tfvars.json
-  
-      FIRST=1
-      for project in $PROJECTS; do
-        PROJECT_UPPER=$(echo "$project" | tr '[:lower:]' '[:upper:]')
-        password="${PROJECT_UPPER}${NEW_USERS_PWD}${TIMESTAMP}"
-  
-        if [ $FIRST -eq 0 ]; then
-          echo "," >> dynamic-projects.auto.tfvars.json
-        fi
-        FIRST=0
-  
-        echo "  \"$project\": { \"user_password\": \"$password\" }" >> dynamic-projects.auto.tfvars.json
-      done
-  
-      echo "} }" >> dynamic-projects.auto.tfvars.json
+      - name: Generate dynamic projects var
+        shell: bash
+        env:
+          NEW_USERS_PWD: ${{ vars.NEW_USERS_PWD }}
+        run: |
+          PROJECTS=$(jq -r 'keys[]' database.json)
+          TIMESTAMP=$(date +%s)
+      
+          echo '{ "projects": {' > dynamic-projects.auto.tfvars.json
+      
+          FIRST=1
+          for project in $PROJECTS; do
+            PROJECT_UPPER=$(echo "$project" | tr '[:lower:]' '[:upper:]')
+            password="${PROJECT_UPPER}${NEW_USERS_PWD}${TIMESTAMP}"
+      
+            if [ $FIRST -eq 0 ]; then
+              echo "," >> dynamic-projects.auto.tfvars.json
+            fi
+            FIRST=0
+      
+            echo "  \"$project\": { \"user_password\": \"$password\" }" >> dynamic-projects.auto.tfvars.json
+          done
+      
+          echo "} }" >> dynamic-projects.auto.tfvars.json
 
-  - name: Show dynamic vars
-    run: cat dynamic-projects.auto.tfvars.json
+      - name: Show dynamic vars
+        run: cat dynamic-projects.auto.tfvars.json
 
-  - name: Terraform Init
-    run: terraform init -upgrade
+      - name: Terraform Init
+        run: terraform init -upgrade
 
-  - name: Terraform Plan
-    run: terraform plan -var-file=${{ vars.ENV }}.tfvars -out=tfplan.binary
+      - name: Terraform Plan
+        run: terraform plan -var-file=${{ vars.ENV }}.tfvars -out=tfplan.binary
 
-  - name: Upload Plan
-    uses: actions/upload-artifact@v4
-    with:
-      name: tfplan
-      path: tfplan.binary
-```
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan.binary
 
-terraform-apply:
-name: Terraform Apply
-needs: terraform-plan
-if: github.event\_name == 'workflow\_dispatch'
-runs-on: ubuntu-latest
-steps:
-\- name: Checkout repo
-uses: actions/checkout\@v3
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-plan
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
 
-```
-  - name: Setup Terraform
-    uses: hashicorp/setup-terraform@v2
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-  - name: Setup SSH Key
-    run: |
-      mkdir -p ~/.ssh
-      echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
-      chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-  # ─── AJOUT : Création utilisateur Snowflake ───
-  - name: Install SnowSQL CLI
-    run: |
-      wget -O install_snowsql.sh \
-        https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/linux_x86_64/snowsql-1.2.24-linux_x86_64.bash
-      chmod +x install_snowsql.sh
-      ./install_snowsql.sh --yes
-      echo 'export PATH="$HOME/.snowsql/bin:$PATH"' >> $GITHUB_ENV
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
+          chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
 
-  - name: Create Snowflake user ahmedkounassopro
-    env:
-      SNOWSQL_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
-      SNOWSQL_USER: ${{ secrets.SNOWFLAKE_ADMIN_USER }}
-      SNOWSQL_PRIVATE_KEY_PATH: ~/.ssh/prod_snowflake_tf_snow_key.p8
-    run: |
-      snowsql -a $SNOWSQL_ACCOUNT -u $SNOWSQL_USER --private-key-path $SNOWSQL_PRIVATE_KEY_PATH -o exit_on_error=true << 'SQL'
-      CREATE USER ahmedkounassopro
-        PASSWORD = 'Strongpassword123+'
-        DEFAULT_ROLE = ACCOUNTADMIN
-        MUST_CHANGE_PASSWORD = TRUE;
-      GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;
-      SQL
-  # ─── FIN AJOUT ───
+      - name: Create Snowflake user
+        run: |
+          echo "CREATE USER ahmedkounassopro PASSWORD='Strongpassword123+' DEFAULT_ROLE=ACCOUNTADMIN MUST_CHANGE_PASSWORD=TRUE; GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;" > create_user.sql
+          snowsql \
+            -a ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }} \
+            -u ${{ secrets.SNOWFLAKE_USERNAME }} \
+            --private-key-path ~/.ssh/prod_snowflake_tf_snow_key.p8 \
+            -f create_user.sql
 
-  - name: Generate dynamic projects var
-    run: |
-      jq -n \
-        --arg sap "${{ secrets.SAP_USER_PASSWORD }}" \
-        --arg sf "${{ secrets.SALESFORCE_USER_PASSWORD }}" \
-        '{
-          projects: {
-            SAP: { user_password: $sap },
-            SALESFORCE: { user_password: $sf }
-          }
-        }' > dynamic-projects.auto.tfvars.json
+      - name: Generate dynamic projects var
+        run: |
+          jq -n \
+            --arg sap "${{ secrets.SAP_USER_PASSWORD }}" \
+            --arg sf "${{ secrets.SALESFORCE_USER_PASSWORD }}" \
+            '{
+              projects: {
+                SAP: { user_password: $sap },
+                SALESFORCE: { user_password: $sf }
+              }
+            }' > dynamic-projects.auto.tfvars.json
 
-  - name: Download Plan
-    uses: actions/download-artifact@v4
-    with:
-      name: tfplan
-      path: .
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: .
 
-  - name: Terraform Init
-    run: terraform init -upgrade
+      - name: Terraform Init
+        run: terraform init -upgrade
 
-  - name: Terraform Apply
-    run: terraform apply -auto-approve -var-file=${{ vars.ENV }}.tfvars tfplan.binary
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var-file=${{ vars.ENV }}.tfvars tfplan.binary
