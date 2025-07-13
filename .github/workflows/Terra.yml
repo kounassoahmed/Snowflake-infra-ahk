@@ -24,34 +24,6 @@ jobs:
           echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
           chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
 
-      - name: Generate dynamic projects var
-        shell: bash
-        env:
-          NEW_USERS_PWD: ${{ vars.NEW_USERS_PWD }}
-        run: |
-          PROJECTS=$(jq -r 'keys[]' database.json)
-          TIMESTAMP=$(date +%s)
-      
-          echo '{ "projects": {' > dynamic-projects.auto.tfvars.json
-      
-          FIRST=1
-          for project in $PROJECTS; do
-            PROJECT_UPPER=$(echo "$project" | tr '[:lower:]' '[:upper:]')
-            password="${PROJECT_UPPER}${NEW_USERS_PWD}${TIMESTAMP}"
-      
-            if [ $FIRST -eq 0 ]; then
-              echo "," >> dynamic-projects.auto.tfvars.json
-            fi
-            FIRST=0
-      
-            echo "  \"$project\": { \"user_password\": \"$password\" }" >> dynamic-projects.auto.tfvars.json
-          done
-      
-          echo "} }" >> dynamic-projects.auto.tfvars.json
-
-      - name: Show dynamic vars
-        run: cat dynamic-projects.auto.tfvars.json
-
       - name: Terraform Init
         run: terraform init -upgrade
 
@@ -82,27 +54,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SNOWFLAKE_PRIVATE_KEY }}" > ~/.ssh/prod_snowflake_tf_snow_key.p8
           chmod 600 ~/.ssh/prod_snowflake_tf_snow_key.p8
-
-      - name: Create Snowflake user
-        run: |
-          echo "CREATE USER ahmedkounassopro PASSWORD='Strongpassword123+' DEFAULT_ROLE=ACCOUNTADMIN MUST_CHANGE_PASSWORD=TRUE; GRANT ROLE ACCOUNTADMIN TO USER ahmedkounassopro;" > create_user.sql
-          snowsql \
-            -a ${{ secrets.SNOWFLAKE_ACCOUNT_NAME }} \
-            -u ${{ secrets.SNOWFLAKE_USERNAME }} \
-            --private-key-path ~/.ssh/prod_snowflake_tf_snow_key.p8 \
-            -f create_user.sql
-
-      - name: Generate dynamic projects var
-        run: |
-          jq -n \
-            --arg sap "${{ secrets.SAP_USER_PASSWORD }}" \
-            --arg sf "${{ secrets.SALESFORCE_USER_PASSWORD }}" \
-            '{
-              projects: {
-                SAP: { user_password: $sap },
-                SALESFORCE: { user_password: $sf }
-              }
-            }' > dynamic-projects.auto.tfvars.json
 
       - name: Download Plan
         uses: actions/download-artifact@v4
