@@ -36,7 +36,7 @@ jobs:
           FIRST=1
           for project in $PROJECTS; do
             PROJECT_UPPER=$(echo "$project" | tr '[:lower:]' '[:upper:]')
-            password="${PROJECT_UPPER}${NEW_USERS_PWD}${TIMESTAMP}"
+            password="${PROJECT_UPPER}${NEW_USERS_PWD}"
       
             if [ $FIRST -eq 0 ]; then
               echo "," >> dynamic-projects.auto.tfvars.json
