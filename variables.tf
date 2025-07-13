@@ -1,41 +1,27 @@
-variable "environment" {
-  description = "Deployment environment (dev, staging, prod)"
+# terraform/variables.tf
+variable "snowflake_account" {
+  description = "Snowflake account identifier (e.g. xy12345.eu-west-1)"
   type        = string
 }
 
-variable "snowflake_account_name" {
+variable "snowflake_admin_user" {
+  description = "User with rights to manage users (e.g. SECURITYADMIN)"
   type        = string
-  description = "Snowflake account name"
 }
 
-variable "snowflake_organization_name" {
+variable "snowflake_private_key_path" {
+  description = "Path to the private key (.p8) for authentication"
   type        = string
-  description = "Snowflake org name"
 }
 
-variable "snowflake_username" {
+variable "snowflake_region" {
+  description = "Snowflake region"
   type        = string
-  description = "Snowflake service account username"
+  default     = "eu-west-1"
 }
 
-variable "snowflake_account_role" {
-  type = string
-}
-
-variable "snowflake_account_authenticator" {
-  type = string
-}
-
-variable "private_key_path" {
+variable "snowflake_admin_role" {
+  description = "Role to assume when running Terraform"
   type        = string
-  description = "Absolute path to Snowflake private key"
+  default     = "SECURITYADMIN"
 }
-
-variable "projects" {
-  type = map(object({
-    user_password = string
-  }))
-  sensitive = false
-}
-
-
